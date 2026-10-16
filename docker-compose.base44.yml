@@ -1,0 +1,32 @@
+services:
+  web:
+    image: python:3.12-slim
+    working_dir: /app
+    restart: on-failure
+    ports:
+      - "3000:5050"
+    volumes:
+      - .:/app
+      - python_env:/opt/venv
+      - prospect_data:/root/.geo-prospects
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    command:
+      - sh
+      - -ec
+      - |
+        python -m venv /opt/venv
+        /opt/venv/bin/pip install -r requirements.txt
+        mkdir -p /root/.geo-prospects/proposals /root/.geo-prospects/audits
+        exec /opt/venv/bin/flask --app scripts/webapp/app.py run --host=0.0.0.0 --port=5050 --reload --no-debugger
+    healthcheck:
+      test: ["CMD", "/opt/venv/bin/python", "-c", "import urllib.request; r = urllib.request.urlopen('http://127.0.0.1:5050/', timeout=4); assert r.status == 200 and b'GEO-SEO CRM' in r.read()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+
+volumes:
+  python_env:
+  prospect_data:
